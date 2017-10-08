@@ -1,62 +1,20 @@
 #include <helper_3dmath.h>
 #include <MPU6050.h>
 
-#include <Servo.h>
+#include "CRServo.h"
 
-class CRServo {
-  int pin;
+#define LED_PIN 13
 
-  int zero;
-  int rZero;
-  int rMax;
-  int fZero;
-  int fMax;
-  public:
-    void attach(int pin) {
-      pinMode(pin, OUTPUT);
-      this->pin = pin;
-    }
+#define GYRO_VELOCITY mpu.getRotationX()
+#define CLOCK 2
 
-    void setZero(int zero) {
-      this->zero = zero;
-    }
-
-    void setForwardDeadzone(int zero, int one) {
-      fZero = zero;
-      fMax = one;
-    }
-
-    void setReverseDeadzone(int zero, int one) {
-      rZero = zero;
-      rMax = one;
-    }
-
-    /**
-     * A number between -128 and 127 describing how fast
-     * to run the motor.
-     */
-    void write(int power) {
-      if (power == 0) {
-        writeRaw(zero);
-      } else if (power > 0) {
-        writeRaw(map(power, 0, 128, fZero, fMax));
-      } else {
-        writeRaw(map(-power, 0, 128, rMax, rZero));
-      }
-    }
-
-    /**
-     * Write raw.
-     */
-    void writeRaw(int power) {
-      analogWrite(pin, power);
-    }
-    
-};
 
 CRServo motorA;
 CRServo motorB;
 CRServo motorC;
+CRServo motors[] = {motorA, motorB, motorC};
+int motorPins[] = {3, 6, 9};
+MPU6050 mpu;
 
 void setup() {
   Serial.begin(9600);
@@ -71,21 +29,24 @@ void setup() {
   TCCR1B = (TCCR1B & 0b11111000) | 0x04;  // Set pin 9 to 112.55hz
 
   motorA.attach(3);
-  motorA.setZero(90);
-  motorA.setForwardDeadzone(90, 160);
-  motorA.setReverseDeadzone(90, 32);
+  motorA.setZero(1500);
+  motorA.setForwardDeadzone(1500, 2000);
+  motorA.setReverseDeadzone(1500, 1000);
   
   motorB.attach(6);
-  motorB.setZero(90);
-  motorB.setForwardDeadzone(90, 160);
-  motorB.setReverseDeadzone(90, 32);
-  
+  motorB.setZero(1500);
+  motorB.setForwardDeadzone(1500, 2000);
+  motorB.setReverseDeadzone(1500, 1000);
+
   motorC.attach(9);
-  motorC.setZero(47);
-  motorC.setForwardDeadzone(47, 80);
-  motorC.setReverseDeadzone(16, 47);
+  motorC.setZero(1500);
+  motorC.setForwardDeadzone(1500, 2000);
+  motorC.setReverseDeadzone(1500, 1000);
+  
+  mpu.initialize();
 
   pinMode(3, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
   
   Serial.println("READY");
 
@@ -93,7 +54,6 @@ void setup() {
 
 void loop() {
 
-/*
   if (Serial.available()) {
 
     CRServo motor;
@@ -110,7 +70,8 @@ void loop() {
         key = Serial.read();
         motor = getMotor(key);
         power = Serial.readStringUntil('\n').toInt();
-        motor.write(power);
+
+        motor.setPower(power);
 
         // Output for debugging
         Serial.print("MOV motor=");
@@ -119,32 +80,46 @@ void loop() {
         Serial.println(power);
         Serial.println("OK");
         break;
-        
-      case 'r':  // Set a motor to a raw power
-        key = Serial.read();
-        motor = getMotor(key);
-        power = Serial.readStringUntil('\n').toInt();
-        motor.writeRaw(power);
 
-        // Output for debugging
-        Serial.print("RAW motor=");
-        Serial.print(key);
-        Serial.print(" power=");
-        Serial.println(power);
+      case 'c':  // Calibrate
+        Serial.println("CAL");
+        doCalibrate(10000);
         Serial.println("OK");
         break;
-        
-
       
     }
     
-  }*/
+  }
 
-  digitalWrite(3, HIGH);
-  delayMicroseconds(3000);
-  digitalWrite(3, LOW);
-  delay(3);
-  
+  outputMotors();
+  delay(CLOCK*1);
+
+}
+
+void outputMotors() {
+  int widths[3];
+  for (int m=0; m < 3; i++) {
+    widths[m] = motors[m].getPulseWidth();
+    if (widths[m] > 0) {
+      digitalWrite(motorPins[m], HIGH);
+    }
+  }
+  while (true) {
+    bool stopLoop = true;
+    for (int m=0; m < 3; i++) {
+      widths[m] -= 10;
+      if (widths[m] < 0) {
+        digitalWrite(motorPins[m], LOW);
+      } else {
+        stopLoop = false;
+      }
+    }
+    if (stopLoop) {
+      break;
+    }
+    delayMicroseconds(CLOCK*10);
+  }
+
 }
 
 CRServo getMotor(char name) {
@@ -156,9 +131,40 @@ CRServo getMotor(char name) {
   return motorA;
 }
 
-void pulseWidth(int pin, int width) {
-  digitalWrite(pin, HIGH);
-  delayMicroseconds(width*2);
-  digitalWrite(pin, LOW);
+void doCalibrate(int times) {
+
+  long gyroXSum;
+  long gyroYSum;
+  long gyroZSum;
+  long accelXSum;
+  long accelYSum;
+  long accelZSum;
+
+  for (int i=0; i<times; i++) {
+    
+    gyroXSum += mpu.getRotationX();
+    gyroYSum += mpu.getRotationY();
+    gyroZSum += mpu.getRotationZ();
+    accelXSum += mpu.getAccelerationX();
+    accelYSum += mpu.getAccelerationY();
+    accelZSum += mpu.getAccelerationZ();
+    
+    if (i % 100 < 50) {
+      digitalWrite(LED_PIN, HIGH);
+    } else {
+      digitalWrite(LED_PIN, LOW);
+    }
+    
+    delayMicroseconds(10);
+    
+  }
+
+  mpu.setXGyroOffset(gyroXSum / times);
+  mpu.setYGyroOffset(gyroYSum / times);
+  mpu.setZGyroOffset(gyroZSum / times);
+  mpu.setXAccelOffset(accelXSum / times);
+  mpu.setYAccelOffset(accelYSum / times);
+  mpu.setZAccelOffset(accelZSum / times);
+
 }
 
