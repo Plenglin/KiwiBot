@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 #include "CRServo.h"
 
 void CRServo::attach(int pin) {
@@ -5,31 +7,31 @@ void CRServo::attach(int pin) {
   this->pin = pin;
 }
 
-void CRServo::setZero(int zero) {
-  this->zero = zero;
-}
-
-void CRServo::setForwardDeadzone(int zero, int one) {
+void CRServo::setForwardDeadzone(int zero, int max) {
   fZero = zero;
-  fMax = one;
+  fMax = max;
 }
 
-void CRServo::setReverseDeadzone(int zero, int one) {
+void CRServo::setReverseDeadzone(int max, int zero) {
+  rMax = max;
   rZero = zero;
-  rMax = one;
 }
 
-int CRServo::getPulseWidth() {
+int CRServo::write(int power) {
+  int out;
   if (power == 0) {
-    return 0;
+    out = 0;
   } else if (power > 0) {
-    return map(power, 0, 128, fZero, fMax);
+    out = map(power, 0, 128, fZero, fMax);
   } else {
-    return map(-power, 0, 128, rMax, rZero);
+    out = map(-power, 0, 128, rMax, rZero);
   }
+  writeRaw(out);
+  return out;
 }
 
-void CRServo::setPower(int power) {
-  this->power = power;
+void CRServo::writeRaw(int width) {
+  Serial.println(pin);
+  analogWrite(pin, width);
 }
 

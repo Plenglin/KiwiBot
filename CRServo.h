@@ -3,7 +3,6 @@
 class CRServo {
   int power;
 
-  int zero;
   int rZero;
   int rMax;
   int fZero;
@@ -21,14 +20,14 @@ class CRServo {
 
     void setReverseDeadzone(int zero, int one);
 
-    int getPulseWidth();
-
-    void setPower(int power);
-
     /**
      * A number between -128 and 127 describing how fast
      * to run the motor.
      */
-    void write();
-    
+    int write(int power);
+
+    /**
+     * Write a raw PWM signal.
+     */
+    void writeRaw(int power);
 };

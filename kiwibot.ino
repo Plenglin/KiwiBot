@@ -12,43 +12,36 @@
 CRServo* motorA;
 CRServo* motorB;
 CRServo* motorC;
-CRServo* motors[] = {motorA, motorB, motorC};
-int motorPins[] = {3, 6, 9};
 MPU6050 mpu;
 
 void setup() {
   Serial.begin(9600);
   Serial.println("INIT");
-  /*
-  a.attach(3);//, 0, 90, 180);
-  b.attach(6);//, 0, 90, 180);
-  c.attach(9);//, 0, 90, 180);*/
 
   TCCR2B = (TCCR2B & 0b11111000) | 0x05;  // Set pin 3 to 244.14hz
   TCCR0B = (TCCR0B & 0b11111000) | 0x04;  // Set pin 6 to 244.14hz
   TCCR1B = (TCCR1B & 0b11111000) | 0x04;  // Set pin 9 to 112.55hz
 
+  motorA = new CRServo();
   (*motorA).attach(3);
-  (*motorA).setZero(0);
-  (*motorA).setForwardDeadzone(1500, 2000);
-  (*motorA).setReverseDeadzone(1500, 1000);
-  (*motorA).setPower(0);
-  
+  (*motorA).setReverseDeadzone(32, 90);
+  (*motorA).setForwardDeadzone(90, 160);
+
+  motorB = new CRServo();
   (*motorB).attach(6);
-  (*motorB).setZero(0);
-  (*motorB).setForwardDeadzone(1500, 2000);
-  (*motorB).setReverseDeadzone(1500, 1000);
-  (*motorB).setPower(0);
-
+  (*motorB).setReverseDeadzone(32, 90);
+  (*motorB).setForwardDeadzone(90, 160);
+  
+  motorC = new CRServo();
   (*motorC).attach(9);
-  (*motorC).setZero(0);
-  (*motorC).setForwardDeadzone(1500, 2000);
-  (*motorC).setReverseDeadzone(1500, 1000);
-  (*motorC).setPower(0);
-
+  (*motorC).setReverseDeadzone(16, 47);
+  (*motorC).setForwardDeadzone(47, 80);
+  
   mpu.initialize();
+  mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_1000);
+  mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_8);
 
-  pinMode(3, OUTPUT);
+
   pinMode(LED_PIN, OUTPUT);
   
   Serial.println("READY");
@@ -62,78 +55,93 @@ void loop() {
     CRServo motor;
     int power;
     char key;
+    int output;
     
     delay(5);  // Wait for message
     char command = Serial.read();
     
     switch (command) {
-      
+
+      case 'a':  // Get MPU data
+
+        Serial.print("MPU ax=");
+        Serial.print(mpu.getAccelerationX());
+        Serial.print(" ay=");
+        Serial.print(mpu.getAccelerationY());
+        Serial.print(" az=");
+        Serial.print(mpu.getAccelerationZ());
+        Serial.print(" gx=");
+        Serial.print(mpu.getRotationX());
+        Serial.print(" gy=");
+        Serial.print(mpu.getRotationY());
+        Serial.print(" gz=");
+        Serial.println(mpu.getRotationZ());
+        Serial.println("OK");
+        break;
+
       case 'm':  // Set a motor to a scaled power
-      
         key = Serial.read();
         motor = *getMotor(key);
         power = Serial.readStringUntil('\n').toInt();
-
-        motor.setPower(power);
+        output = motor.write(power);
 
         // Output for debugging
         Serial.print("MOV motor=");
         Serial.print(key);
         Serial.print(" power=");
         Serial.print(power);
+        Serial.print(" pin=");
+        Serial.print(motor.pin);
         Serial.print(" width=");
-        Serial.println(motor.getPulseWidth());
+        Serial.println(output);
         Serial.println("OK");
         break;
+        
+      case 'r':  // Set a motor to a raw width
+        key = Serial.read();
+        motor = *getMotor(key);
+        power = Serial.readStringUntil('\n').toInt();
+        motor.writeRaw(power);
 
+        // Output for debugging
+        Serial.print("RAW motor=");
+        Serial.print(key);
+        Serial.print(" width=");
+        Serial.println(power);
+        Serial.println("OK");
+        break;
+        
       case 'c':  // Calibrate
         Serial.println("CAL");
-        doCalibrate(10000);
+        doCalibrate(1000);
+
+        Serial.print("ax=");
+        Serial.print(mpu.getXAccelOffset());
+        Serial.print(" ay=");
+        Serial.print(mpu.getYAccelOffset());
+        Serial.print(" az=");
+        Serial.print(mpu.getZAccelOffset());
+        Serial.print(" gx=");
+        Serial.print(mpu.getXGyroOffset());
+        Serial.print(" gy=");
+        Serial.print(mpu.getYGyroOffset());
+        Serial.print(" gZ=");
+        Serial.println(mpu.getZGyroOffset());
+
         Serial.println("OK");
         break;
       
     }
     
   }
-
-  outputMotors();
   delay(CLOCK*1);
-
-}
-
-void outputMotors() {
-  
-  int widths[3];
-  for (int m=0; m < 3; m++) {
-    widths[m] = (*motors[m]).getPulseWidth();
-    if (widths[m] > 0) {
-      digitalWrite(motorPins[m], HIGH);
-    } else {
-      digitalWrite(motorPins[m], LOW);
-    }
-  }
-
-  while (true) {
-    bool stopLoop = true;
-    for (int m=0; m < 3; m++) {
-      widths[m] -= 100;
-      if (widths[m] <= 0) {
-        digitalWrite(motorPins[m], LOW);
-      } else {
-        stopLoop = false;
-      }
-    }
-    if (stopLoop) {
-      break;
-    }
-    delayMicroseconds(CLOCK*70);
-  }
 
 }
 
 CRServo* getMotor(char name) {
   switch (name) {
-    case 'a': return motorA;
+    case 'a': 
+      return motorA;
     case 'b': return motorB;
     case 'c': return motorC;
   }
@@ -141,22 +149,40 @@ CRServo* getMotor(char name) {
 }
 
 void doCalibrate(int times) {
+  digitalWrite(LED_PIN, HIGH);
 
-  long gyroXSum;
-  long gyroYSum;
-  long gyroZSum;
-  long accelXSum;
-  long accelYSum;
-  long accelZSum;
+  long gyroXSum = 0;
+  long gyroYSum = 0;
+  long gyroZSum = 0;
+  long accelXSum = 0;
+  long accelYSum = 0;
+  long accelZSum = 0;
 
-  for (int i=0; i<times; i++) {
-    
+  mpu.setXGyroOffset(0);
+  mpu.setYGyroOffset(0);
+  mpu.setZGyroOffset(0);
+  mpu.setXAccelOffset(0);
+  mpu.setYAccelOffset(0);
+  mpu.setZAccelOffset(0);
+
+  digitalWrite(LED_PIN, LOW);
+
+  delay(10);
+
+  for (int i=0; i < times; i++) {
+
     gyroXSum += mpu.getRotationX();
     gyroYSum += mpu.getRotationY();
     gyroZSum += mpu.getRotationZ();
     accelXSum += mpu.getAccelerationX();
     accelYSum += mpu.getAccelerationY();
-    accelZSum += mpu.getAccelerationZ();
+    //accelZSum += mpu.getAccelerationZ();
+    int az = mpu.getAccelerationZ();
+    accelZSum += az;
+
+    Serial.print(az);
+    Serial.print(" ");
+    Serial.println(accelZSum);
     
     if (i % 100 < 50) {
       digitalWrite(LED_PIN, HIGH);
@@ -164,16 +190,18 @@ void doCalibrate(int times) {
       digitalWrite(LED_PIN, LOW);
     }
     
-    delayMicroseconds(10);
+    delay(1);
     
   }
 
-  mpu.setXGyroOffset(gyroXSum / times);
-  mpu.setYGyroOffset(gyroYSum / times);
-  mpu.setZGyroOffset(gyroZSum / times);
-  mpu.setXAccelOffset(accelXSum / times);
-  mpu.setYAccelOffset(accelYSum / times);
-  mpu.setZAccelOffset(accelZSum / times);
+  mpu.setXGyroOffset(-gyroXSum / times);
+  mpu.setYGyroOffset(-gyroYSum / times);
+  mpu.setZGyroOffset(-gyroZSum / times);
+  mpu.setXAccelOffset(-accelXSum / times);
+  mpu.setYAccelOffset(-accelYSum / times);
+  mpu.setZAccelOffset(-accelZSum / times);
+
+  Serial.println(mpu.getAccelerationZ());
 
 }
 
