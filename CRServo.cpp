@@ -18,6 +18,7 @@ void CRServo::setReverseDeadzone(int max, int zero) {
 }
 
 int CRServo::write(int power) {
+  power = constrain(power, -128, 128);
   int out;
   if (power == 0) {
     out = 0;
@@ -31,7 +32,6 @@ int CRServo::write(int power) {
 }
 
 void CRServo::writeRaw(int width) {
-  Serial.println(pin);
   analogWrite(pin, width);
 }
 

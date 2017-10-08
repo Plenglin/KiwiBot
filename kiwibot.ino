@@ -2,25 +2,34 @@
 #include <MPU6050.h>
 
 #include "CRServo.h"
+#include "PIDGen.h"
 
 #define LED_PIN 13
 
-#define CLOCK 2
-
+const int CLOCK = 2;
+const long REVOLUTION = 1474560;
 
 CRServo* motorA;
 CRServo* motorB;
 CRServo* motorC;
 MPU6050 mpu;
 
+unsigned long lastTimestamp = 0;
+long angle = 0;  // Divide this by 4096 for the actual angle
+long vx;
+long vy;
+
+PIDGen gyroPID;  // Takes in degrees in 1/4096 increments
+
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(9600 / CLOCK);
   Serial.println("INIT");
 
   TCCR2B = (TCCR2B & 0b11111000) | 0x05;  // Set pin 3 to 244.14hz
   TCCR0B = (TCCR0B & 0b11111000) | 0x04;  // Set pin 6 to 244.14hz
   TCCR1B = (TCCR1B & 0b11111000) | 0x04;  // Set pin 9 to 112.55hz
 
+  Serial.println("INIT CRSERVO");
   motorA = new CRServo();
   (*motorA).attach(3);
   (*motorA).setReverseDeadzone(32, 90);
@@ -30,7 +39,7 @@ void setup() {
   (*motorB).attach(6);
   (*motorB).setReverseDeadzone(32, 90);
   (*motorB).setForwardDeadzone(90, 160);
-  
+
   motorC = new CRServo();
   (*motorC).attach(9);
   (*motorC).setReverseDeadzone(16, 47);
@@ -42,27 +51,34 @@ void setup() {
   mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_1000);
   mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_8);
 
+  Serial.println("INIT PID");
+  gyroPID.p = 1;
 
   pinMode(LED_PIN, OUTPUT);
-  
+
   Serial.println("READY");
+
+  Serial.println(wrapAngle(0, 360));
+  Serial.println(wrapAngle(90, 360));
+  Serial.println(wrapAngle(120, 360));
+  Serial.println(wrapAngle(180, 360));
+  Serial.println(wrapAngle(250, 360));
+  Serial.println(wrapAngle(390, 360));
+  Serial.println(wrapAngle(-30, 360));
 
   delay(100);
 
 }
 
-unsigned long last = 0;
-long angle = 0;  // Divide this by 1638400 for the actual angle
-long vx;
-long vy;
+int gyroTarget;
 
 void loop() {
 
-  unsigned long time = micros();
-  int delta = time - last;
-  last = time;
-  long angVel = long(mpu.getRotationX()/16*16);  // The angle, filtered
-  angle += (angVel*delta) / 10;
+  unsigned long timestamp = micros() / CLOCK;
+  int delta = timestamp - lastTimestamp;
+  lastTimestamp = timestamp;
+  long angVel = long(mpu.getRotationX() / 16 * 16); // The angle, filtered
+  angle += (angVel * delta) / 2000;
 
   if (Serial.available()) {
 
@@ -70,10 +86,10 @@ void loop() {
     int power;
     char key;
     int output;
-    
+
     delay(5);  // Wait for message
     char command = Serial.read();
-    
+
     switch (command) {
 
       case 'a':  // Get MPU data
@@ -105,6 +121,7 @@ void loop() {
         break;
 
       case 'm':  // Set a motor to a scaled power
+
         key = Serial.read();
         motor = *getMotor(key);
         power = Serial.readStringUntil('\n').toInt();
@@ -121,7 +138,14 @@ void loop() {
         Serial.println(output);
         Serial.println("OK");
         break;
-        
+
+      case 'g':   // Set the gyro PID target, in 4096th degrees
+        gyroTarget = Serial.readStringUntil('\n').toInt();
+        Serial.print("TRG GYRO value=");
+        Serial.println(gyroTarget);
+        Serial.println("OK");
+        break;
+
       case 'r':  // Set a motor to a raw width
         key = Serial.read();
         motor = *getMotor(key);
@@ -135,7 +159,13 @@ void loop() {
         Serial.println(power);
         Serial.println("OK");
         break;
-        
+
+      case 's':  // Reset integrators
+        Serial.println("RES");
+        resetIntegrators();
+        Serial.println("OK");
+        break;
+
       case 'c':  // Calibrate
         Serial.println("CAL");
         doCalibrate(1000);
@@ -155,18 +185,38 @@ void loop() {
 
         Serial.println("OK");
         break;
-      
-    }
-    
-  }
-  
-  delay(CLOCK*1);
 
+    }
+
+  }
+
+  long angleError = wrapAngle(angle - gyroTarget, REVOLUTION);
+  long gyroPIDOutput = gyroPID.pushError(angleError, delta) / 4096;
+  if (abs(gyroPIDOutput) < 20) {
+    gyroPIDOutput = 0;
+  }
+  motorA->write(gyroPIDOutput);
+  motorB->write(gyroPIDOutput);
+  motorC->write(gyroPIDOutput);
+  delay(CLOCK * 1);
+
+}
+
+long wrapAngle(long angle, long revolution) {
+  return fmod(angle - revolution/2, revolution) - revolution/2;
+}
+
+long fmod(long a, long b) {
+  if (a >= 0) {
+    return a % b;
+  } else {
+    return a % b + b;
+  }
 }
 
 CRServo* getMotor(char name) {
   switch (name) {
-    case 'a': 
+    case 'a':
       return motorA;
     case 'b': return motorB;
     case 'c': return motorC;
@@ -174,8 +224,17 @@ CRServo* getMotor(char name) {
   return motorA;
 }
 
+void resetIntegrators() {
+  angle = 0;
+  vx = 0;
+  vy = 0;
+}
+
 void doCalibrate(int times) {
   digitalWrite(LED_PIN, HIGH);
+  motorA->write(0);
+  motorB->write(0);
+  motorC->write(0);
 
   long gyroXSum = 0;
   long gyroYSum = 0;
@@ -195,7 +254,7 @@ void doCalibrate(int times) {
 
   delay(10);
 
-  for (int i=0; i < times; i++) {
+  for (int i = 0; i < times; i++) {
 
     gyroXSum += mpu.getRotationX();
     gyroYSum += mpu.getRotationY();
@@ -205,15 +264,15 @@ void doCalibrate(int times) {
     //accelZSum += mpu.getAccelerationZ();
     int az = mpu.getAccelerationZ();
     accelZSum += az;
-    
+
     if (i % 100 < 50) {
       digitalWrite(LED_PIN, HIGH);
     } else {
       digitalWrite(LED_PIN, LOW);
     }
-    
+
     delay(1);
-    
+
   }
 
   mpu.setXGyroOffset(-gyroXSum / times);
@@ -223,7 +282,7 @@ void doCalibrate(int times) {
   mpu.setYAccelOffset(-accelYSum / times);
   mpu.setZAccelOffset(-accelZSum / times);
 
-  angle = 0;
-  
+  resetIntegrators();
+
 }
 
