@@ -5,7 +5,6 @@
 
 #define LED_PIN 13
 
-#define GYRO_VELOCITY mpu.getRotationX()
 #define CLOCK 2
 
 
@@ -36,8 +35,10 @@ void setup() {
   (*motorC).attach(9);
   (*motorC).setReverseDeadzone(16, 47);
   (*motorC).setForwardDeadzone(47, 80);
-  
+
+  Serial.println("INIT MPU");
   mpu.initialize();
+  delay(5);
   mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_1000);
   mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_8);
 
@@ -46,9 +47,22 @@ void setup() {
   
   Serial.println("READY");
 
+  delay(100);
+
 }
 
+unsigned long last = 0;
+long angle = 0;  // Divide this by 1638400 for the actual angle
+long vx;
+long vy;
+
 void loop() {
+
+  unsigned long time = micros();
+  int delta = time - last;
+  last = time;
+  long angVel = long(mpu.getRotationX()/16*16);  // The angle, filtered
+  angle += (angVel*delta) / 10;
 
   if (Serial.available()) {
 
@@ -76,6 +90,17 @@ void loop() {
         Serial.print(mpu.getRotationY());
         Serial.print(" gz=");
         Serial.println(mpu.getRotationZ());
+        Serial.println("OK");
+        break;
+
+      case 'b':  // Get integrated values
+
+        Serial.print("BER head=");
+        Serial.print(angle);
+        Serial.print(" vx=");
+        Serial.print(vx);
+        Serial.print(" vy=");
+        Serial.println(vy);
         Serial.println("OK");
         break;
 
@@ -134,6 +159,7 @@ void loop() {
     }
     
   }
+  
   delay(CLOCK*1);
 
 }
@@ -179,10 +205,6 @@ void doCalibrate(int times) {
     //accelZSum += mpu.getAccelerationZ();
     int az = mpu.getAccelerationZ();
     accelZSum += az;
-
-    Serial.print(az);
-    Serial.print(" ");
-    Serial.println(accelZSum);
     
     if (i % 100 < 50) {
       digitalWrite(LED_PIN, HIGH);
@@ -201,7 +223,7 @@ void doCalibrate(int times) {
   mpu.setYAccelOffset(-accelYSum / times);
   mpu.setZAccelOffset(-accelZSum / times);
 
-  Serial.println(mpu.getAccelerationZ());
-
+  angle = 0;
+  
 }
 
