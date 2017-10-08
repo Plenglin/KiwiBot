@@ -33,7 +33,3 @@ void CRServo::setPower(int power) {
   this->power = power;
 }
 
-void CRServo::write() {
-  outputPulseWidth(pin, getPulseWidth());
-}
-

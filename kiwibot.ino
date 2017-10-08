@@ -9,10 +9,10 @@
 #define CLOCK 2
 
 
-CRServo motorA;
-CRServo motorB;
-CRServo motorC;
-CRServo motors[] = {motorA, motorB, motorC};
+CRServo* motorA;
+CRServo* motorB;
+CRServo* motorC;
+CRServo* motors[] = {motorA, motorB, motorC};
 int motorPins[] = {3, 6, 9};
 MPU6050 mpu;
 
@@ -28,21 +28,24 @@ void setup() {
   TCCR0B = (TCCR0B & 0b11111000) | 0x04;  // Set pin 6 to 244.14hz
   TCCR1B = (TCCR1B & 0b11111000) | 0x04;  // Set pin 9 to 112.55hz
 
-  motorA.attach(3);
-  motorA.setZero(1500);
-  motorA.setForwardDeadzone(1500, 2000);
-  motorA.setReverseDeadzone(1500, 1000);
+  (*motorA).attach(3);
+  (*motorA).setZero(0);
+  (*motorA).setForwardDeadzone(1500, 2000);
+  (*motorA).setReverseDeadzone(1500, 1000);
+  (*motorA).setPower(0);
   
-  motorB.attach(6);
-  motorB.setZero(1500);
-  motorB.setForwardDeadzone(1500, 2000);
-  motorB.setReverseDeadzone(1500, 1000);
+  (*motorB).attach(6);
+  (*motorB).setZero(0);
+  (*motorB).setForwardDeadzone(1500, 2000);
+  (*motorB).setReverseDeadzone(1500, 1000);
+  (*motorB).setPower(0);
 
-  motorC.attach(9);
-  motorC.setZero(1500);
-  motorC.setForwardDeadzone(1500, 2000);
-  motorC.setReverseDeadzone(1500, 1000);
-  
+  (*motorC).attach(9);
+  (*motorC).setZero(0);
+  (*motorC).setForwardDeadzone(1500, 2000);
+  (*motorC).setReverseDeadzone(1500, 1000);
+  (*motorC).setPower(0);
+
   mpu.initialize();
 
   pinMode(3, OUTPUT);
@@ -68,7 +71,7 @@ void loop() {
       case 'm':  // Set a motor to a scaled power
       
         key = Serial.read();
-        motor = getMotor(key);
+        motor = *getMotor(key);
         power = Serial.readStringUntil('\n').toInt();
 
         motor.setPower(power);
@@ -77,7 +80,9 @@ void loop() {
         Serial.print("MOV motor=");
         Serial.print(key);
         Serial.print(" power=");
-        Serial.println(power);
+        Serial.print(power);
+        Serial.print(" width=");
+        Serial.println(motor.getPulseWidth());
         Serial.println("OK");
         break;
 
@@ -97,18 +102,22 @@ void loop() {
 }
 
 void outputMotors() {
+  
   int widths[3];
-  for (int m=0; m < 3; i++) {
-    widths[m] = motors[m].getPulseWidth();
+  for (int m=0; m < 3; m++) {
+    widths[m] = (*motors[m]).getPulseWidth();
     if (widths[m] > 0) {
       digitalWrite(motorPins[m], HIGH);
+    } else {
+      digitalWrite(motorPins[m], LOW);
     }
   }
+
   while (true) {
     bool stopLoop = true;
-    for (int m=0; m < 3; i++) {
-      widths[m] -= 10;
-      if (widths[m] < 0) {
+    for (int m=0; m < 3; m++) {
+      widths[m] -= 100;
+      if (widths[m] <= 0) {
         digitalWrite(motorPins[m], LOW);
       } else {
         stopLoop = false;
@@ -117,12 +126,12 @@ void outputMotors() {
     if (stopLoop) {
       break;
     }
-    delayMicroseconds(CLOCK*10);
+    delayMicroseconds(CLOCK*70);
   }
 
 }
 
-CRServo getMotor(char name) {
+CRServo* getMotor(char name) {
   switch (name) {
     case 'a': return motorA;
     case 'b': return motorB;
