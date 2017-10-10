@@ -8,6 +8,8 @@
 
 const int CLOCK = 2;
 const long REVOLUTION = 1474560;
+const long MS2 = 418;  // m/s^2 per accel output
+const long DEG = 4096;  // Divide angle by this for degrees
 
 CRServo* motorA;
 CRServo* motorB;
@@ -16,8 +18,8 @@ MPU6050 mpu;
 
 unsigned long lastTimestamp = 0;
 long angle = 0;  // Divide this by 4096 for the actual angle
-long vx;
-long vy;
+long velX;  // In micrometers/second, or um/s
+long velY;  // In micrometers/second, or um/s
 
 PIDGen gyroPID;  // Takes in degrees in 1/4096 increments
 
@@ -48,6 +50,13 @@ void setup() {
   Serial.println("INIT MPU");
   mpu.initialize();
   delay(5);
+  mpu.setXGyroOffset(73);
+  mpu.setYGyroOffset(-15);
+  mpu.setZGyroOffset(53);
+  mpu.setXAccelOffset(-2074);
+  mpu.setYAccelOffset(-492);
+  mpu.setZAccelOffset(1019);
+
   mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_1000);
   mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_8);
 
@@ -72,14 +81,8 @@ void setup() {
 
 int gyroTarget;
 
-void loop() {
-
-  unsigned long timestamp = micros() / CLOCK;
-  int delta = timestamp - lastTimestamp;
-  lastTimestamp = timestamp;
-  long angVel = long(mpu.getRotationX() / 16 * 16); // The angle, filtered
-  angle += (angVel * delta) / 2000;
-
+void processSerial() {
+  
   if (Serial.available()) {
 
     CRServo motor;
@@ -114,9 +117,9 @@ void loop() {
         Serial.print("BER head=");
         Serial.print(angle);
         Serial.print(" vx=");
-        Serial.print(vx);
+        Serial.print(velX);
         Serial.print(" vy=");
-        Serial.println(vy);
+        Serial.println(velY);
         Serial.println("OK");
         break;
 
@@ -166,7 +169,7 @@ void loop() {
         Serial.println("OK");
         break;
 
-      case 'c':  // Calibrate
+      case 'c':  // Calibrate; AVOID
         Serial.println("CAL");
         doCalibrate(1000);
 
@@ -189,9 +192,29 @@ void loop() {
     }
 
   }
+}
+
+void loop() {
+
+  // Update time
+  unsigned long timestamp = micros() / CLOCK;
+  int delta = timestamp - lastTimestamp;
+  lastTimestamp = timestamp;
+  
+  // Update Integrators
+  long angVel = long(mpu.getRotationX() / 16 * 16); // The angle, filtered
+  angle += (angVel * delta) / 2000;
+
+  long accX = long(mpu.getAccelerationZ()) / 256 * 256;
+  velX += (accX * delta) / MS2;
+
+  long accY = long(mpu.getAccelerationY()) / 256 * 256;
+  velY += (accY * delta) / MS2;
+
+  processSerial();
 
   long angleError = wrapAngle(angle - gyroTarget, REVOLUTION);
-  long gyroPIDOutput = gyroPID.pushError(angleError, delta) / 4096;
+  long gyroPIDOutput = gyroPID.pushError(angleError, delta) / DEG;
   if (abs(gyroPIDOutput) < 20) {
     gyroPIDOutput = 0;
   }
@@ -226,8 +249,8 @@ CRServo* getMotor(char name) {
 
 void resetIntegrators() {
   angle = 0;
-  vx = 0;
-  vy = 0;
+  velX = 0;
+  velY = 0;
 }
 
 void doCalibrate(int times) {
