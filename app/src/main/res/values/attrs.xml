@@ -11,6 +11,7 @@
 
     <declare-styleable name="JoystickView">
         <attr name="bgColor" format="color"/>
+        <attr name="bgRadius" format="dimension"/>
         <attr name="touchColor" format="color"/>
         <attr name="touchRadius" format="dimension"/>
         <attr name="joystickLimit" format="dimension"/>

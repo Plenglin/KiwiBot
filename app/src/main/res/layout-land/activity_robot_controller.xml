@@ -178,7 +178,8 @@
             android:clickable="true"
 
             custom:bgColor="@color/controlsBg"
-            custom:joystickLimit="5dp"
+            custom:bgRadius="80dp"
+            custom:joystickLimit="-10dp"
             custom:touchColor="@color/controlsIndicator"
             custom:touchRadius="30dp"/>
 

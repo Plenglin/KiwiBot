@@ -22,7 +22,7 @@ class JoystickView(context: Context, attributes: AttributeSet) : View(context, a
         style = Paint.Style.FILL
     }
 
-    private val bgRadius get() = minOf(width, height).toFloat() / 2f
+    private val bgRadius get() = attrArray.getDimensionPixelSize(R.styleable.JoystickView_bgRadius, minOf(width, height)/ 2).toFloat()
     private val joystickTouchRadius get() = lazy {attrArray.getDimensionPixelSize(R.styleable.JoystickView_touchRadius, 0).toFloat()}
     private val limitPadding get() = lazy { attrArray.getDimensionPixelSize(R.styleable.JoystickView_joystickLimit, 0).toFloat() }
     private val maxRadius get() = bgRadius - joystickTouchRadius.value - limitPadding.value
