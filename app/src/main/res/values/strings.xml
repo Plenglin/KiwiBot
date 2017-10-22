@@ -3,4 +3,10 @@
 
     <string name="translationJoystickTitle">TRANSLATION</string>
     <string name="rotationJoystickTitle">ROTATION</string>
+    <string name="dataPaneTitle">DATA</string>
+    <string name="connectionStateLabel">Conn</string>
+    <string name="bearingLabel">Bearing</string>
+    <string name="vxLabel">Vx</string>
+    <string name="vyLabel">Vy</string>
+    <string name="velocityLabel">Velocity</string>
 </resources>

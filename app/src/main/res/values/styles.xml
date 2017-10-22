@@ -20,4 +20,25 @@
         <item name="android:background">@color/black_overlay</item>
     </style>
 
+    <style name="ControlLabel">
+        <item name="android:textSize">12pt</item>
+        <item name="android:textColor">@color/controllerData</item>
+        <item name="android:textAlignment">center</item>
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+
+    <style name="DataLabel">
+        <item name="android:textSize">6pt</item>
+        <item name="android:textColor">@color/controllerData</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:gravity">left</item>
+    </style>
+
+    <style name="DataValue">
+        <item name="android:textSize">6pt</item>
+        <item name="android:textColor">@color/controllerData</item>
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:gravity">right</item>
+    </style>
+
 </resources>
