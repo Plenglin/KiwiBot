@@ -13,12 +13,12 @@ class JoystickView(context: Context, attributes: AttributeSet) : View(context, a
     private var attrArray = context.theme.obtainStyledAttributes(attributes, R.styleable.JoystickView, 0, 0)!!
 
     private var bgPaint = Paint().apply {
-        color = attrArray.getColorStateList(R.styleable.JoystickView_bgColor).getColorForState(drawableState, Color.WHITE)
+        color = attrArray.getColorStateList(R.styleable.JoystickView_bgColor)!!.getColorForState(drawableState, Color.WHITE)
         style = Paint.Style.FILL
     }
 
     private var touchPaint = Paint().apply {
-        color = attrArray.getColorStateList(R.styleable.JoystickView_touchColor).getColorForState(drawableState, Color.WHITE)
+        color = attrArray.getColorStateList(R.styleable.JoystickView_touchColor)!!.getColorForState(drawableState, Color.WHITE)
         style = Paint.Style.FILL
     }
 
@@ -38,7 +38,7 @@ class JoystickView(context: Context, attributes: AttributeSet) : View(context, a
     private var touchY = 0f
     private var touching = false
 
-    val touchRadius get() = minOf(dist / maxRadius, 1f).toDouble()
+    val touchRadius get() = if (touching) minOf(dist / maxRadius, 1f).toDouble() else 0.0
     val theta get() = Math.atan2(dy.toDouble(), dx.toDouble())
     val bearing get() = (5 * Math.PI / 2 - theta) % (2*Math.PI)
 

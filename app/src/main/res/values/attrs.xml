@@ -16,4 +16,12 @@
         <attr name="joystickLimit" format="dimension"/>
     </declare-styleable>
 
+    <declare-styleable name="KnobView">
+        <attr name="knobColor" format="color"/>
+        <attr name="indicatorColor" format="color"/>
+        <attr name="indicatorWidth" format="dimension"/>
+        <attr name="indicatorLength" format="dimension"/>
+        <attr name="initialAngle" format="float"/>
+    </declare-styleable>
+
 </resources>
