@@ -9,4 +9,5 @@
     <string name="vxLabel">Vx</string>
     <string name="vyLabel">Vy</string>
     <string name="velocityLabel">Velocity</string>
+    <string name="connectDeviceButton">Connect</string>
 </resources>

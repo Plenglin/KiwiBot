@@ -9,5 +9,8 @@
     <color name="controlsIndicator">#cbf71d19</color>
     <color name="controllerData">#e2e2e2</color>
 
+    <color name="disconnected">#d32f2f</color>
+    <color name="connected">#2e7d32</color>
+
     <color name="black_overlay">#66000000</color>
 </resources>
