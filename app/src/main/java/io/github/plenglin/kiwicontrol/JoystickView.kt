@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 
@@ -24,6 +25,7 @@ class JoystickView(context: Context, attributes: AttributeSet) : View(context, a
 
     private val radius get() = minOf(width, height).toFloat() / 2f
     private val joystickTouchRadius get() = lazy {attrArray.getDimensionPixelSize(R.styleable.JoystickView_touchRadius, 0).toFloat()}
+    private val limitPadding get() = lazy { attrArray.getDimensionPixelSize(R.styleable.JoystickView_joystickLimit, 0).toFloat() }
 
     private val centerX get() = this.width/2f
     private val centerY get() = this.height/2f
@@ -33,27 +35,38 @@ class JoystickView(context: Context, attributes: AttributeSet) : View(context, a
     private var touching = false
 
     override fun onDraw(canvas: Canvas?) {
+        super.onDraw(canvas)
         canvas!!
-        canvas.drawCircle(centerX, centerY, radius, bgPaint)
+
+        val dx = touchX - centerX
+        val dy = touchY - centerY
+        val maxDist = radius - joystickTouchRadius.value - limitPadding.value
+        val dist = Math.sqrt((dx*dx + dy*dy).toDouble())
+        var drawX = centerX
+        var drawY = centerY
         if (touching) {
-            canvas.drawCircle(touchX, touchY, radius, touchPaint)
-        } else {
-            canvas.drawCircle(centerX, centerY, joystickTouchRadius.value, touchPaint)
+            if (dist < maxDist) {
+                drawX += dx
+                drawY += dy
+            } else {
+                drawX += (dx * maxDist / dist).toFloat()
+                drawY += (dy * maxDist / dist).toFloat()
+            }
         }
+
+        canvas.drawCircle(centerX, centerY, radius, bgPaint)
+        canvas.drawCircle(drawX, drawY, joystickTouchRadius.value, touchPaint)
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         event!!
         when (event.action) {
             MotionEvent.ACTION_MOVE, MotionEvent.ACTION_DOWN -> {
-                val dx = event.x - centerX
-                val dy = event.y - centerY
-                if (dx*dx + dy*dy <= radius*radius) {
-                    touchX = event.x
-                    touchY = event.y
-                    invalidate()
-                    return true
-                }
+                touchX = event.x
+                touchY = event.y
+                touching = true
+                invalidate()
+                return true
             }
             MotionEvent.ACTION_UP -> {
                 touchX = 0f

@@ -3,9 +3,11 @@
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
+    <color name="joystickLabel">#e2e2e2</color>
+    <color name="controllerBg">#303030</color>
 
-    <color name="leftJoystickBg">#fff9c4</color>
-    <color name="leftJoystickTouch">#8eef5350</color>
+    <color name="transJoystickBg">#2a98f9</color>
+    <color name="transJoystickTouch">#cbf71d19</color>
 
     <color name="black_overlay">#66000000</color>
 </resources>

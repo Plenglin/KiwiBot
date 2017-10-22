@@ -1,17 +1,22 @@
 package io.github.plenglin.kiwicontrol
 
+import android.app.Activity
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.view.View
+import android.view.Window
 
-class RobotController : AppCompatActivity() {
+class RobotControllerActivity : Activity() {
 
-    private val joystick = findViewById(R.id.leftJoystick)
+    private lateinit var joystick: JoystickView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
         setVisibilityState()
+        setContentView(R.layout.activity_robot_controller)
+        joystick = findViewById(R.id.translationJoystick) as JoystickView
+        joystick.isClickable = true
     }
 
     override fun onPostCreate(savedInstanceState: Bundle?) {

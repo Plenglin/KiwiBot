@@ -4,9 +4,9 @@
 
              android:layout_width="match_parent"
              android:layout_height="match_parent"
-             android:background="#0099cc"
+             android:background="@color/controllerBg"
 
-             tools:context="io.github.plenglin.kiwicontrol.RobotController">
+             tools:context="io.github.plenglin.kiwicontrol.RobotControllerActivity">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -16,31 +16,38 @@
 
         <RelativeLayout
             android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:layout_weight="1">
 
-            <TextView
-                android:id="@+id/textView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="TextView"/>
 
             <io.github.plenglin.kiwicontrol.JoystickView
-                android:id="@+id/leftJoystick"
+                android:id="@+id/translationJoystick"
                 android:layout_width="200dp"
                 android:layout_height="200dp"
                 android:layout_centerInParent="true"
+                android:clickable="true"
 
-                custom:bgColor="@color/leftJoystickBg"
-                custom:touchColor="@color/leftJoystickTouch"
-                custom:touchRadius="25dp"/>
+                custom:bgColor="@color/transJoystickBg"
+                custom:touchColor="@color/transJoystickTouch"
+                custom:touchRadius="25dp"
+                custom:joystickLimit="5dp"/>
+
+            <TextView
+                android:layout_centerHorizontal="true"
+                android:layout_above="@id/translationJoystick"
+                android:paddingBottom="10dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/translationJoystickTitle"
+                android:textColor="@color/joystickLabel"
+                android:textSize="12pt"/>
 
         </RelativeLayout>
 
         <RelativeLayout
             android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:layout_weight="1">
 
         </RelativeLayout>
 

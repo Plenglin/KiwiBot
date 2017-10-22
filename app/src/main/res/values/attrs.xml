@@ -13,6 +13,7 @@
         <attr name="bgColor" format="color"/>
         <attr name="touchColor" format="color"/>
         <attr name="touchRadius" format="dimension"/>
+        <attr name="joystickLimit" format="dimension"/>
     </declare-styleable>
 
 </resources>
