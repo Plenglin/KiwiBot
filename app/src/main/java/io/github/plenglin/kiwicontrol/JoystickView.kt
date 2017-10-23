@@ -38,8 +38,19 @@ class JoystickView(context: Context, attributes: AttributeSet) : View(context, a
     private var touchY = 0f
     private var touching = false
 
+    /**
+     * How far the joystick is from the center.
+     */
     val touchRadius get() = if (touching) minOf(dist / maxRadius, 1f).toDouble() else 0.0
+
+    /**
+     * The angle of the joystick, relative to right, going CCW.
+     */
     val theta get() = Math.atan2(dy.toDouble(), dx.toDouble())
+
+    /**
+     * The angle of the joystick, relative to up, going CW.
+     */
     val bearing get() = (5 * Math.PI / 2 - theta) % (2*Math.PI)
 
     override fun onDraw(canvas: Canvas?) {

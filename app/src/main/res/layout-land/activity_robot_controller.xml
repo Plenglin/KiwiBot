@@ -82,8 +82,7 @@
 
             <TableRow
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:paddingBottom="5dp">
+                android:layout_height="match_parent">
 
                 <TextView
                     style="@style/DataLabel"
@@ -93,6 +92,26 @@
 
                 <TextView
                     android:id="@+id/dataBearing"
+                    style="@style/DataValue"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    tools:text="0"/>
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:paddingBottom="5dp">
+
+                <TextView
+                    style="@style/DataLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/bearingTargetLabel"/>
+
+                <TextView
+                    android:id="@+id/dataTargetBearing"
                     style="@style/DataValue"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

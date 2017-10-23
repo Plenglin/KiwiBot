@@ -6,6 +6,7 @@
     <string name="dataPaneTitle">DATA</string>
     <string name="connectionStateLabel">Conn</string>
     <string name="bearingLabel">Bearing</string>
+    <string name="bearingTargetLabel">BearingT</string>
     <string name="vxLabel">Vx</string>
     <string name="vyLabel">Vy</string>
     <string name="velocityLabel">Velocity</string>
