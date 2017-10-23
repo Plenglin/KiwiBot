@@ -8,6 +8,8 @@ object Constants {
 
     fun bitgreesToDegrees(a: Int): Double = a.toDouble() / BITGREES_PER_DEGREE
 
+    fun degreesToBitgrees(a: Double): Int = (a * BITGREES_PER_DEGREE).toInt()
+
     val INFO_PING_PERIOD = 100L
 
     val CTRL_SEND_PERIOD = 50L

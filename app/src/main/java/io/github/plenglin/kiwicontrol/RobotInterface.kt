@@ -7,7 +7,7 @@ import android.util.Log
 import java.io.*
 import java.util.*
 
-class RobotInterface(val btDevice: BluetoothDevice) {
+class RobotInterface(val activity: RobotControllerActivity, val btDevice: BluetoothDevice) {
 
     var robotState = RobotState(0.0, 0.0)
     lateinit var socket: BluetoothSocket
@@ -17,12 +17,20 @@ class RobotInterface(val btDevice: BluetoothDevice) {
     val requestPinger = Handler()
 
     fun initializeDevice() {
-        btDevice.createRfcommSocketToServiceRecord(btDevice.uuids[0].uuid)
 
-        outputStream = PrintStream(socket.outputStream)
+        Log.d(Constants.TAG, "attempting to connect to $btDevice")
+        socket = btDevice.createRfcommSocketToServiceRecord(btDevice.uuids[0].uuid)
+        try {
+            socket.connect()
+        } catch (e: IOException) {
+            activity.onBluetoothConnectionFailure()
+        }
+
+        activity.onBluetoothConnected()
     }
 
     fun initializeThreads() {
+        outputStream = PrintStream(socket.outputStream)
         inputThread = Thread(Runnable {
             val scanner = Scanner(socket.inputStream)
             Log.i(Constants.TAG, "initializing input thread")
