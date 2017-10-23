@@ -32,7 +32,6 @@ int CRServo::write(int power) {
 }
 
 void CRServo::writeRaw(int width) {
-  Serial.println(width);
   analogWrite(pin, width);
 }
 

@@ -11,10 +11,21 @@ const long REVOLUTION = 1474560;
 const long MS2 = 418;  // m/s^2 per accel output
 const long DEG = 4096;  // Divide angle by this for degrees
 
+const int STATE_PID_DISABLED = 0;
+const int STATE_PID_GYRO_ONLY = 1;
+const int STATE_PID_TRANSLATION_ONLY = 2;
+const int STATE_PID_GYRO_AND_TRANSLATION = 3;
+
 CRServo* motorA;
 CRServo* motorB;
 CRServo* motorC;
 MPU6050 mpu;
+
+int robotState = STATE_PID_DISABLED;
+
+int transA;
+int transB;
+int transC;
 
 unsigned long lastTimestamp = 0;
 long angle = 0;  // Divide this by 4096 for the actual angle
@@ -116,7 +127,66 @@ void processSerial() {
         Serial.println("OK");
         break;
 
-      case 'm':  // Set a motor to a scaled power
+      case 'd':  // Set the robot state
+        key = Serial.readStringUntil('\n').toInt();
+        if (key == -1) {
+          Serial.print("STATE=");
+          Serial.println(robotState);
+        } else {
+          robotState = key;
+          Serial.print("DEF STATE=");
+          Serial.println(robotState);
+        }
+        Serial.println("OK");
+        break;
+
+      case 'g':  // Set the gyro PID target, in 4096th degrees
+        gyroTarget = Serial.readStringUntil('\n').toInt();
+        Serial.print("TRG GYRO value=");
+        Serial.println(gyroTarget);
+        Serial.println("OK");
+        break;
+
+      case 'r':  // Set a motor to a raw width. Writes directly.
+        key = Serial.read();
+        motor = *getMotor(key);
+        power = Serial.readStringUntil('\n').toInt();
+        motor.writeRaw(power);
+
+        // Output for debugging
+        Serial.print("RAW motor=");
+        Serial.print(key);
+        Serial.print(" width=");
+        Serial.println(power);
+        Serial.println("OK");
+        break;
+
+      case 's':  // Reset integrators and translations
+        Serial.println("RES");
+        resetIntegrators();
+        transA = 0;
+        transB = 0;
+        transC = 0;
+        Serial.println("OK");
+        break;
+
+      case 't':  // Set a motor to a scaled power. Does not write directly. Only works if the robot is allowing translation.
+        key = Serial.read();
+        power = Serial.readStringUntil('\n').toInt();
+        switch (key) {
+          case 'a': transA = power; break;
+          case 'b': transB = power; break;
+          case 'c': transC = power; break;
+        }
+        // Output for debugging
+        Serial.print("TRA motor=");
+        Serial.print(key);
+        Serial.print(" power=");
+        Serial.println(power);
+        Serial.println("OK");
+        break;
+
+      case 'w':  // Set a motor to a scaled power. Writes directly.
 
         key = Serial.read();
         motor = *getMotor(key);
@@ -135,34 +205,7 @@ void processSerial() {
         Serial.println("OK");
         break;
 
-      case 'g':   // Set the gyro PID target, in 4096th degrees
-        gyroTarget = Serial.readStringUntil('\n').toInt();
-        Serial.print("TRG GYRO value=");
-        Serial.println(gyroTarget);
-        Serial.println("OK");
-        break;
-
-      case 'r':  // Set a motor to a raw width
-        key = Serial.read();
-        motor = *getMotor(key);
-        power = Serial.readStringUntil('\n').toInt();
-        motor.writeRaw(power);
-
-        // Output for debugging
-        Serial.print("RAW motor=");
-        Serial.print(key);
-        Serial.print(" width=");
-        Serial.println(power);
-        Serial.println("OK");
-        break;
-
-      case 's':  // Reset integrators
-        Serial.println("RES");
-        resetIntegrators();
-        Serial.println("OK");
-        break;
-
-      case 'c':  // Calibrate; AVOID
+      /*case 'c':  // Calibrate; AVOID
         Serial.println("CAL");
         doCalibrate(1000);
 
@@ -180,7 +223,7 @@ void processSerial() {
         Serial.println(mpu.getZGyroOffset());
 
         Serial.println("OK");
-        break;
+        break;*/
 
     }
 
@@ -206,17 +249,46 @@ void loop() {
 
   processSerial();
 
-  long angleError = wrapAngle(wrapAngle(angle, REVOLUTION) - gyroTarget, REVOLUTION);
-  long gyroPIDOutput = gyroPID->pushError(angleError, delta) / DEG;
-  /*Serial.print(angleError);
-  Serial.print("\t");
-  Serial.println(gyroPIDOutput);*/
-  if (abs(gyroPIDOutput) < 20) {
-    gyroPIDOutput = 0;
+  if (robotState == STATE_PID_DISABLED) {
+    motorA->write(0);
+    motorB->write(0);
+    motorC->write(0);
+  } else {
+    long angleError = wrapAngle(wrapAngle(angle, REVOLUTION) - gyroTarget, REVOLUTION);
+    long gyroPIDOutput = gyroPID->pushError(angleError, delta) / DEG;
+
+    switch (robotState) {
+      case STATE_PID_GYRO_ONLY:
+        if (abs(gyroPIDOutput) < 20) {
+          gyroPIDOutput = 0;
+        }
+        motorA->write(gyroPIDOutput);
+        motorB->write(gyroPIDOutput);
+        motorC->write(gyroPIDOutput);
+        break;
+      case STATE_PID_TRANSLATION_ONLY:
+        motorA->write(transA);
+        motorB->write(transB);
+        motorC->write(transC);
+        break;
+      case STATE_PID_GYRO_AND_TRANSLATION: {
+        int aOut = transA + gyroPIDOutput;
+        int bOut = transB + gyroPIDOutput;
+        int cOut = transC + gyroPIDOutput;
+        int maxPower = max(max(aOut, bOut), cOut) + gyroPIDOutput;
+        if (maxPower > 127) {
+          aOut = aOut * 128 / maxPower;
+          bOut = bOut * 128 / maxPower;
+          cOut = cOut * 128 / maxPower;
+        }
+        motorA->write(aOut);
+        motorB->write(bOut);
+        motorC->write(cOut);
+        break;
+      }
+    }
   }
-  motorA->write(gyroPIDOutput);
-  motorB->write(gyroPIDOutput);
-  motorC->write(gyroPIDOutput);
+  
   delay(CLOCK * 1);
 
 }
