@@ -21,7 +21,7 @@ long angle = 0;  // Divide this by 4096 for the actual angle
 long velX;  // In micrometers/second, or um/s
 long velY;  // In micrometers/second, or um/s
 
-PIDGen gyroPID;  // Takes in degrees in 1/4096 increments
+PIDGen* gyroPID;  // Takes in degrees in 1/4096 increments
 
 void setup() {
   Serial.begin(9600 / CLOCK);
@@ -34,17 +34,17 @@ void setup() {
   Serial.println("INIT CRSERVO");
   motorA = new CRServo();
   (*motorA).attach(3);
-  (*motorA).setReverseDeadzone(32, 90);
+  (*motorA).setReverseDeadzone(90, 32);
   (*motorA).setForwardDeadzone(90, 160);
 
   motorB = new CRServo();
   (*motorB).attach(6);
-  (*motorB).setReverseDeadzone(32, 90);
+  (*motorB).setReverseDeadzone(90, 32);
   (*motorB).setForwardDeadzone(90, 160);
 
   motorC = new CRServo();
   (*motorC).attach(9);
-  (*motorC).setReverseDeadzone(16, 47);
+  (*motorC).setReverseDeadzone(47, 16);
   (*motorC).setForwardDeadzone(47, 80);
 
   Serial.println("INIT MPU");
@@ -61,19 +61,12 @@ void setup() {
   mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_8);
 
   Serial.println("INIT PID");
-  gyroPID.p = 1;
+  gyroPID = new PIDGen();
+  gyroPID->p = 1;
 
   pinMode(LED_PIN, OUTPUT);
 
   Serial.println("READY");
-
-  Serial.println(wrapAngle(0, 360));
-  Serial.println(wrapAngle(90, 360));
-  Serial.println(wrapAngle(120, 360));
-  Serial.println(wrapAngle(180, 360));
-  Serial.println(wrapAngle(250, 360));
-  Serial.println(wrapAngle(390, 360));
-  Serial.println(wrapAngle(-30, 360));
 
   delay(100);
 
@@ -205,16 +198,19 @@ void loop() {
   long angVel = long(mpu.getRotationX() / 16 * 16); // The angle, filtered
   angle += (angVel * delta) / 2000;
 
-  long accX = long(mpu.getAccelerationZ()) / 256 * 256;
+  /*long accX = long(mpu.getAccelerationZ()) / 256 * 256;
   velX += (accX * delta) / MS2;
 
   long accY = long(mpu.getAccelerationY()) / 256 * 256;
-  velY += (accY * delta) / MS2;
+  velY += (accY * delta) / MS2;*/
 
   processSerial();
 
-  long angleError = wrapAngle(angle - gyroTarget, REVOLUTION);
-  long gyroPIDOutput = gyroPID.pushError(angleError, delta) / DEG;
+  long angleError = wrapAngle(wrapAngle(angle, REVOLUTION) - gyroTarget, REVOLUTION);
+  long gyroPIDOutput = gyroPID->pushError(angleError, delta) / DEG;
+  /*Serial.print(angleError);
+  Serial.print("\t");
+  Serial.println(gyroPIDOutput);*/
   if (abs(gyroPIDOutput) < 20) {
     gyroPIDOutput = 0;
   }
