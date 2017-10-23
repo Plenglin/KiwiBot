@@ -31,21 +31,24 @@ class RobotInterface(val activity: RobotControllerActivity, val btDevice: Blueto
 
     fun initializeThreads() {
         outputStream = PrintStream(socket.outputStream)
+        Log.i(Constants.TAG, "initializing input thread")
         inputThread = Thread(Runnable {
+            Log.i(Constants.TAG, "starting input thread")
             val scanner = Scanner(socket.inputStream)
-            Log.i(Constants.TAG, "initializing input thread")
-            scanner.useDelimiter("""\nOK\n""")
+            scanner.useDelimiter("OK")
             while (true) {
                 val inputString = scanner.next()
-                Log.d(Constants.TAG, inputString)
-                val inputData = inputString.split(" ").toMutableList()
+                val inputData = inputString.replace("\n", "").split(" ").toMutableList()
                 val key = inputData.removeAt(0)
                 val serialized = paramsToMap(inputData)
-                when (key) {
+                Log.d(Constants.TAG, "received key: $key")
+                when (key.trim()) {
                     "BER" -> {
+                        Log.d(Constants.TAG, "$serialized")
                         robotState.bearing = Constants.bitgreesToDegrees(serialized["head"]?.toInt() ?: 0)
                     }
                     "TRG" -> {
+                        Log.d(Constants.TAG, "$serialized")
                         robotState.targetBearing = Constants.bitgreesToDegrees(serialized["value"]?.toInt() ?: 0)
                     }
                 }
@@ -56,7 +59,7 @@ class RobotInterface(val activity: RobotControllerActivity, val btDevice: Blueto
     }
 
     fun requestRobotState() {
-        Log.d(Constants.TAG, "pinging for robot state")
+        //Log.d(Constants.TAG, "pinging for robot state")
 
         synchronized (outputStream) {
             outputStream.println("b")

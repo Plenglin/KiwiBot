@@ -118,7 +118,10 @@ class RobotControllerActivity : Activity() {
         val r = (joystick.touchRadius * 128).toInt()
         val t = joystick.theta
         val angle = Constants.degreesToBitgrees(Math.toDegrees(knob.theta))
-        Log.d(Constants.TAG, "gyrotarget=$angle\t")
+
+        val roboTarget = robot.robotState.targetBearing
+        val roboGyro = robot.robotState.bearing
+        Log.d(Constants.TAG, "gyrotarget=$angle\trobotarget=$roboTarget\trobogyro=$roboGyro")
         synchronized (robot.outputStream) {
             robot.outputStream.println("ta$r")
             robot.outputStream.println("g$angle")
