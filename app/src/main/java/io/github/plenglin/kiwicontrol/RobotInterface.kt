@@ -63,7 +63,6 @@ class RobotInterface(val activity: RobotControllerActivity, val btDevice: Blueto
 
         synchronized (outputStream) {
             outputStream.println("b")
-            outputStream.println("g")
         }
 
         requestPinger.postDelayed({ requestRobotState() }, Constants.INFO_PING_PERIOD)
