@@ -46,7 +46,7 @@ class JoystickView(context: Context, attributes: AttributeSet) : View(context, a
     /**
      * The angle of the joystick, relative to right, going CCW.
      */
-    val theta get() = Math.atan2(dy.toDouble(), dx.toDouble())
+    val theta get() = -Math.atan2(dy.toDouble(), dx.toDouble())
 
     /**
      * The angle of the joystick, relative to up, going CW.

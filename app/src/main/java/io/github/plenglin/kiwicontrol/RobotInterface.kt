@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.os.Handler
 import android.util.Log
+import pl.info.czerwinski.physics2d.Vector
 import java.io.*
 import java.util.*
 
@@ -45,11 +46,11 @@ class RobotInterface(val activity: RobotControllerActivity, val btDevice: Blueto
                 when (key.trim()) {
                     "BER" -> {
                         Log.d(Constants.TAG, "$serialized")
-                        robotState.bearing = Constants.bitgreesToDegrees(serialized["head"]?.toInt() ?: 0)
+                        robotState.bearing = Math.toRadians(Constants.bitgreesToDegrees(serialized["head"]?.toInt() ?: 0))
                     }
                     "TRG" -> {
                         Log.d(Constants.TAG, "$serialized")
-                        robotState.targetBearing = Constants.bitgreesToDegrees(serialized["value"]?.toInt() ?: 0)
+                        robotState.targetBearing = Math.toRadians(Constants.bitgreesToDegrees(serialized["value"]?.toInt() ?: 0))
                     }
                 }
             }
@@ -69,6 +70,14 @@ class RobotInterface(val activity: RobotControllerActivity, val btDevice: Blueto
         requestPinger.postDelayed({ requestRobotState() }, Constants.INFO_PING_PERIOD)
     }
 
+    companion object {
+
+        val vectorA = Vector.angle(Math.PI / 3)
+        val vectorB = Vector.angle(Math.PI)
+        val vectorC = Vector.angle(5 * Math.PI / 3)
+
+    }
+
 }
 
 fun paramsToMap(data: List<String>): Map<String, String> {
@@ -83,5 +92,6 @@ fun paramsToMap(data: List<String>): Map<String, String> {
     }
     return output
 }
+
 
 data class RobotState(var bearing: Double, var targetBearing: Double)

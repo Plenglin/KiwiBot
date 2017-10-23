@@ -17,6 +17,7 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import pl.info.czerwinski.physics2d.Vector
 import java.text.DecimalFormat
 
 class RobotControllerActivity : Activity() {
@@ -32,8 +33,13 @@ class RobotControllerActivity : Activity() {
     private lateinit var bearingIndicator: TextView
     private lateinit var bearingTargetIndicator: TextView
 
+    private lateinit var vxIndicator: TextView
+    private lateinit var vyIndicator: TextView
+    private lateinit var velIndicator: TextView
+
     private lateinit var ctrlSendHandler: Handler
     private lateinit var tableUpdateHandler: Handler
+    private lateinit var inputDebugHandler: Handler
 
     private val threeDecFmt = "%.3f"
 
@@ -57,6 +63,11 @@ class RobotControllerActivity : Activity() {
         }
     }
 
+    fun inputDebugHandler() {
+        Log.d(Constants.TAG, "${joystick.touchRadius}\t${joystick.theta}\t${knob.theta}")
+        inputDebugHandler.postDelayed({ inputDebugHandler() }, 250)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -69,7 +80,9 @@ class RobotControllerActivity : Activity() {
         knob = findViewById(R.id.bearingKnob) as KnobView
 
         joystick = findViewById(R.id.translationJoystick) as JoystickView
-        joystick.isClickable = true
+
+        inputDebugHandler = Handler()
+        inputDebugHandler.post { inputDebugHandler() }
 
         connectBtn = findViewById(R.id.connectBtn) as Button
         connectBtn.setOnClickListener {
@@ -105,26 +118,45 @@ class RobotControllerActivity : Activity() {
         bearingIndicator = findViewById(R.id.dataBearing) as TextView
         bearingTargetIndicator = findViewById(R.id.dataTargetBearing) as TextView
 
+        vxIndicator = findViewById(R.id.dataVelocityX) as TextView
+        vyIndicator = findViewById(R.id.dataVelocityY) as TextView
+        velIndicator = findViewById(R.id.dataVelocityMag) as TextView
+
         onBluetoothDisconnected()
     }
 
     fun updateTableHandler() {
-        bearingIndicator.text = threeDecFmt.format(robot.robotState.bearing)
-        bearingTargetIndicator.text = threeDecFmt.format(robot.robotState.targetBearing)
+        bearingIndicator.text = threeDecFmt.format(Math.toDegrees(robot.robotState.bearing))
+        bearingTargetIndicator.text = threeDecFmt.format(Math.toDegrees(robot.robotState.targetBearing))
         tableUpdateHandler.postDelayed({ updateTableHandler() }, Constants.INFO_PING_PERIOD)
     }
 
     fun sendControlDataHandler() {
-        val r = (joystick.touchRadius * 128).toInt()
-        val t = joystick.theta
-        val angle = Constants.degreesToBitgrees(Math.toDegrees(knob.theta))
+
+        // Calculate motor outputs from joystick.
+        val joystickVector = Vector.angle(joystick.theta) * joystick.touchRadius.toFloat()
+
+        vxIndicator.text = threeDecFmt.format(joystickVector.x)
+        vyIndicator.text = threeDecFmt.format(joystickVector.y)
+        velIndicator.text = threeDecFmt.format(joystick.touchRadius)
+
+        val aAdj = RobotInterface.vectorA.rotated(robot.robotState.bearing)
+        val bAdj = RobotInterface.vectorB.rotated(robot.robotState.bearing)
+        val cAdj = RobotInterface.vectorC.rotated(robot.robotState.bearing)
+
+        val aOut = (joystickVector * aAdj * 128).toInt()
+        val bOut = (joystickVector * bAdj * 128).toInt()
+        val cOut = (joystickVector * cAdj * 128).toInt()
+
+        val gyroTarget = Constants.degreesToBitgrees(Math.toDegrees(knob.bearing))
 
         val roboTarget = robot.robotState.targetBearing
         val roboGyro = robot.robotState.bearing
-        Log.d(Constants.TAG, "gyrotarget=$angle\trobotarget=$roboTarget\trobogyro=$roboGyro")
         synchronized (robot.outputStream) {
-            robot.outputStream.println("ta$r")
-            robot.outputStream.println("g$angle")
+            robot.outputStream.println("ta$aOut")
+            robot.outputStream.println("tb$bOut")
+            robot.outputStream.println("tc$cOut")
+            robot.outputStream.println("g$gyroTarget")
         }
         ctrlSendHandler.postDelayed({ sendControlDataHandler() }, Constants.CTRL_SEND_PERIOD)
     }
