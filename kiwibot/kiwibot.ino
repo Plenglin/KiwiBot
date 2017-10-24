@@ -256,12 +256,12 @@ void loop() {
   } else {
     long angleError = wrapAngle(wrapAngle(angle, REVOLUTION) - gyroTarget, REVOLUTION);
     long gyroPIDOutput = gyroPID->pushError(angleError, delta) / DEG;
+    if (abs(gyroPIDOutput) < 20) {
+      gyroPIDOutput = 0;
+    }
 
     switch (robotState) {
       case STATE_PID_GYRO_ONLY:
-        if (abs(gyroPIDOutput) < 20) {
-          gyroPIDOutput = 0;
-        }
         motorA->write(gyroPIDOutput);
         motorB->write(gyroPIDOutput);
         motorC->write(gyroPIDOutput);

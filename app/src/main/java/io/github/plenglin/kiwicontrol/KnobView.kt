@@ -42,7 +42,7 @@ class KnobView(context: Context, attributes: AttributeSet) : View(context, attri
 
         val indicatorEnd = knobRadius - indicatorLength
         val dx = Math.cos(theta).toFloat()
-        val dy = Math.sin(theta).toFloat()
+        val dy = -Math.sin(theta).toFloat()
 
         canvas.drawCircle(centerX, centerY, knobRadius, knobPaint)
         canvas.drawLine(
@@ -55,7 +55,7 @@ class KnobView(context: Context, attributes: AttributeSet) : View(context, attri
         event!!
         when (event.action) {
             MotionEvent.ACTION_MOVE, MotionEvent.ACTION_DOWN -> {
-                theta = Math.atan2((event.y - centerY).toDouble(), (event.x - centerX).toDouble())
+                theta = -Math.atan2((event.y - centerY).toDouble(), (event.x - centerX).toDouble())
                 invalidate()
                 return true
             }
