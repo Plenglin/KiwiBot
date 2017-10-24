@@ -35,22 +35,26 @@ class RobotInterface(val activity: RobotControllerActivity, val btDevice: Blueto
         Log.i(Constants.TAG, "initializing input thread")
         inputThread = Thread(Runnable {
             Log.i(Constants.TAG, "starting input thread")
-            val scanner = Scanner(socket.inputStream)
-            scanner.useDelimiter("OK")
+            val stream = BufferedInputStream(socket.inputStream)
+            val scanner = Scanner(stream)
+            scanner.useDelimiter("\n")
             while (true) {
                 val inputString = scanner.next()
-                val inputData = inputString.replace("\n", "").split(" ").toMutableList()
+                Log.d(Constants.TAG, inputString)
+                val inputData = inputString.split(" ").toMutableList()
                 val key = inputData.removeAt(0)
                 val serialized = paramsToMap(inputData)
-                Log.d(Constants.TAG, "received key: $key")
                 when (key.trim()) {
                     "BER" -> {
-                        Log.d(Constants.TAG, "$serialized")
+                        Log.d(Constants.TAG, "BER: $serialized")
                         robotState.bearing = Math.toRadians(Constants.bitgreesToDegrees(serialized["head"]?.toInt() ?: 0))
                     }
                     "TRG" -> {
-                        Log.d(Constants.TAG, "$serialized")
+                        Log.d(Constants.TAG, "TRG: $serialized")
                         robotState.targetBearing = Math.toRadians(Constants.bitgreesToDegrees(serialized["value"]?.toInt() ?: 0))
+                    }
+                    "DBG" -> {
+                        Log.d(Constants.TAG, "DBG: $inputString")
                     }
                 }
             }

@@ -31,7 +31,7 @@ class KnobView(context: Context, attributes: AttributeSet) : View(context, attri
     }
 
     var theta: Double = Math.toRadians(attrArray.getFloat(R.styleable.KnobView_initialAngle, 0f).toDouble())
-        get() = field
+        get() = (field + 2 * Math.PI) % (2 * Math.PI)
         private set(value) {field = value}
 
     val bearing get() = (5 * Math.PI / 2 - theta) % (2*Math.PI)

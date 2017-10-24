@@ -83,7 +83,7 @@ void setup() {
 
 }
 
-int gyroTarget;
+long gyroTarget;
 
 void processSerial() {
   
@@ -140,8 +140,8 @@ void processSerial() {
         Serial.println("OK");
         break;
 
-      case 'g':  // Set the gyro PID target, in 4096th degrees
-        gyroTarget = Serial.readStringUntil('\n').toInt();
+      case 'g':  // Set the gyro PID target, in degrees
+        gyroTarget = Serial.readStringUntil('\n').toInt() * DEG;
         Serial.print("TRG GYRO value=");
         Serial.println(gyroTarget);
         Serial.println("OK");
@@ -248,6 +248,8 @@ void loop() {
   velY += (accY * delta) / MS2;*/
 
   processSerial();
+
+  debug(String(gyroTarget));
 
   if (robotState == STATE_PID_DISABLED) {
     motorA->write(0);
@@ -375,5 +377,10 @@ void doCalibrate(int times) {
 
   resetIntegrators();
 
+}
+
+void debug(String data) {
+  Serial.println("DBG " + data);
+  Serial.println("OK");
 }
 

@@ -148,14 +148,15 @@ class RobotControllerActivity : Activity() {
         val bOut = (joystickVector * bAdj * 128).toInt()
         val cOut = (joystickVector * cAdj * 128).toInt()
 
-        val gyroTarget = Constants.degreesToBitgrees(Math.toDegrees(knob.bearing))
+        val gyroTarget = Math.toDegrees(knob.theta).toInt()
+        Log.d(Constants.TAG, "g$gyroTarget")
 
-        val roboTarget = robot.robotState.targetBearing
-        val roboGyro = robot.robotState.bearing
         synchronized (robot.outputStream) {
             robot.outputStream.println("ta$aOut")
             robot.outputStream.println("tb$bOut")
             robot.outputStream.println("tc$cOut")
+        }
+        synchronized(robot.outputStream) {
             robot.outputStream.println("g$gyroTarget")
         }
         ctrlSendHandler.postDelayed({ sendControlDataHandler() }, Constants.CTRL_SEND_PERIOD)
